@@ -152,53 +152,76 @@ void PrintStudents(const Student* students, int N) {
 }
 
 void WriteStudents(const string& filename, const Student* students, int N) {
-    ofstream file(filename);
+    ofstream file(filename, ios::binary | ios::out);
     if (!file) {
         cerr << "Error opening file for writing." << endl;
         return;
     }
 
-    file << "=======================================================================================================" << endl;
-    file << "| # | Surname       | Course | Specialization               | Physics | Mathematics | Additional Grade |" << endl;
-    file << "-------------------------------------------------------------------------------------------------------" << endl;
+    file.write(reinterpret_cast<const char*>(&N), sizeof(N));
 
     for (int i = 0; i < N; ++i) {
-        file << "| " << setw(2) << right << i + 1 << " | ";
-        file << setw(13) << left << students[i].surname << " | ";
-        file << setw(6) << right << students[i].course << " | ";
-        string specName;
+        size_t length = students[i].surname.length();
+        file.write(reinterpret_cast<const char*>(&length), sizeof(length));
+        file.write(students[i].surname.c_str(), length);
+
+        file.write(reinterpret_cast<const char*>(&students[i].course), sizeof(students[i].course));
+        file.write(reinterpret_cast<const char*>(&students[i].specialization), sizeof(students[i].specialization));
+        file.write(reinterpret_cast<const char*>(&students[i].physics_grade), sizeof(students[i].physics_grade));
+        file.write(reinterpret_cast<const char*>(&students[i].math_grade), sizeof(students[i].math_grade));
+
         switch (students[i].specialization) {
-        case COMPUTER_SCIENCE: specName = "Computer Science"; break;
-        case INFORMATICS: specName = "Informatics"; break;
-        case MATH_ECONOMICS: specName = "Math and Economics"; break;
-        case PHYSICS_INFORMATICS: specName = "Physics and Informatics"; break;
-        case LABOR_TRAINING: specName = "Labor Training"; break;
-        }
-        file << setw(28) << left << specName << " | ";
-        file << setw(7) << right << students[i].physics_grade << " | ";
-        file << setw(11) << right << students[i].math_grade << " | ";
-        switch (students[i].specialization) {
-        case COMPUTER_SCIENCE: file << setw(16) << right << students[i].additional_grade.programming << " |" << endl; break;
-        case INFORMATICS: file << setw(16) << right << students[i].additional_grade.numerical_methods << " |" << endl; break;
-        default: file << setw(16) << right << students[i].additional_grade.pedagogy << " |" << endl; break;
+        case COMPUTER_SCIENCE:
+            file.write(reinterpret_cast<const char*>(&students[i].additional_grade.programming), sizeof(students[i].additional_grade.programming));
+            break;
+        case INFORMATICS:
+            file.write(reinterpret_cast<const char*>(&students[i].additional_grade.numerical_methods), sizeof(students[i].additional_grade.numerical_methods));
+            break;
+        default:
+            file.write(reinterpret_cast<const char*>(&students[i].additional_grade.pedagogy), sizeof(students[i].additional_grade.pedagogy));
+            break;
         }
     }
-    file << "=======================================================================================================" << endl;
 
     file.close();
 }
 
 void ReadStudents(const string& filename) {
-    ifstream file(filename);
+    ifstream file(filename, ios::binary | ios::in);
     if (!file) {
         cerr << "Error opening file for reading." << endl;
         return;
     }
 
-    string line;
-    while (getline(file, line)) {
-        cout << line << endl;
+    int N;
+    file.read(reinterpret_cast<char*>(&N), sizeof(N));
+    Student* students = new Student[N];
+
+    for (int i = 0; i < N; ++i) {
+        size_t length;
+        file.read(reinterpret_cast<char*>(&length), sizeof(length));
+        students[i].surname.resize(length);
+        file.read(&students[i].surname[0], length);
+
+        file.read(reinterpret_cast<char*>(&students[i].course), sizeof(students[i].course));
+        file.read(reinterpret_cast<char*>(&students[i].specialization), sizeof(students[i].specialization));
+        file.read(reinterpret_cast<char*>(&students[i].physics_grade), sizeof(students[i].physics_grade));
+        file.read(reinterpret_cast<char*>(&students[i].math_grade), sizeof(students[i].math_grade));
+
+        switch (students[i].specialization) {
+        case COMPUTER_SCIENCE:
+            file.read(reinterpret_cast<char*>(&students[i].additional_grade.programming), sizeof(students[i].additional_grade.programming));
+            break;
+        case INFORMATICS:
+            file.read(reinterpret_cast<char*>(&students[i].additional_grade.numerical_methods), sizeof(students[i].additional_grade.numerical_methods));
+            break;
+        default:
+            file.read(reinterpret_cast<char*>(&students[i].additional_grade.pedagogy), sizeof(students[i].additional_grade.pedagogy));
+            break;
+        }
     }
+
+    PrintStudents(students, N);
 
     file.close();
 }
